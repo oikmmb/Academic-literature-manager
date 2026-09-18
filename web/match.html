@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图片匹配文献 - 文献管家</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .page { max-width: 760px; margin: 0 auto; padding: 30px 20px; overflow-y: auto; height: 100vh; }
+    .back { color: var(--text-2); text-decoration: none; font-size: 13px; display: inline-block; margin-bottom: 14px; }
+    .back:hover { color: var(--accent); }
+    .dropzone {
+      border: 2px dashed #c3cad4; border-radius: 14px; padding: 50px 20px;
+      text-align: center; cursor: pointer; background: #fff; color: var(--text-2); transition: all .2s;
+    }
+    .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .dropzone .big { font-size: 40px; margin-bottom: 10px; }
+    .panel { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); margin-top: 16px; }
+    .match-card { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); }
+    .match-card:last-child { border-bottom: none; }
+    .match-card .info { flex: 1; min-width: 0; }
+    .score {
+      font-weight: 700; color: var(--accent); background: var(--accent-soft);
+      border-radius: 20px; padding: 3px 12px; font-size: 13px; white-space: nowrap;
+    }
+    .match-on { font-size: 12px; color: var(--text-2); }
+    .ocr-preview {
+      background: #f8f9fb; border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; font-size: 12.5px; color: var(--text-2);
+      max-height: 140px; overflow-y: auto; white-space: pre-wrap; margin-top: 10px;
+    }
+    .img-preview { max-width: 260px; max-height: 160px; border-radius: 8px; border: 1px solid var(--border); }
+    .loading { text-align: center; color: var(--text-2); padding: 30px 0; }
+    .spinner {
+      display: inline-block; width: 26px; height: 26px; border-radius: 50%;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite; vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <a class="back" href="index.html">← 返回文献库</a>
+    <!-- 图片输入区 -->
+    <div id="step-input">
+      <div class="dropzone" id="dropzone">
+        <div class="big">📷</div>
+        <div>粘贴论文截图（Ctrl+V）或拖入图片</div>
+        <div style="font-size:12.5px; margin-top:8px">支持论文首页 / 标题页 / 图表页，自动 OCR 后匹配库中文献</div>
+      </div>
+    </div>
+
+
+    <!-- 结果区 -->
+    <div id="step-result" style="display:none">
+      <div class="panel">
+        <div style="display:flex; gap:14px; align-items:flex-start">
+          <img class="img-preview" id="preview-img" alt="预览">
+          <div style="flex:1; min-width:0">
+            <b id="result-title">匹配中…</b>
+            <div class="match-on" id="result-sub"></div>
+            <div class="ocr-preview" id="ocr-preview" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="matches-panel"></div>
+      <div class="panel" id="crossref-panel" style="display:none">
+        <b>联网补录（Crossref）</b>
+        <div class="form-row" style="margin-top:8px">
+          <label>检索关键词（可编辑 OCR 文本）</label>
+          <textarea id="cr-query" rows="2"></textarea>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:6px">
+          <button class="btn" id="btn-cr-doi" style="display:none">用 DOI 精确查询</button>
+          <button class="btn primary" id="btn-cr-search">检索 Crossref</button>
+        </div>
+        <div id="cr-candidates" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/match.js"></script>
+</body>
+</html>

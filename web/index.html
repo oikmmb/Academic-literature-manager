@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文献管家</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>📚 文献管家</h1>
+      <button class="nav-item active" data-view="all">全部文献</button>
+      <button class="nav-item" data-view="year">按发表时间</button>
+      <button class="nav-item" data-view="subject">按文献主题</button>
+      <button class="nav-item" data-view="first_author">按第一作者</button>
+      <button class="nav-item" data-view="corresponding_author">按通讯作者</button>
+      <div style="flex:1"></div>
+      <button class="nav-item" id="nav-settings">⚙ 设置</button>
+    </aside>
+    <main class="main">
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="搜索标题 / 作者 / 期刊…" style="width:260px">
+        <select id="sort">
+          <option value="created_at:desc">最近添加</option>
+          <option value="year:desc">发表时间 ↓</option>
+          <option value="year:asc">发表时间 ↑</option>
+          <option value="title:asc">标题 A-Z</option>
+          <option value="first_author:asc">第一作者 A-Z</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn" id="btn-match">🔍 图片匹配</button>
+        <button class="btn primary" id="btn-import">＋ 导入文献</button>
+      </div>
+      <div class="list" id="list"></div>
+    </main>
+  </div>
+
+  <!-- 元数据编辑弹窗 -->
+  <div class="modal-mask" id="paper-modal" style="display:none">
+    <div class="modal">
+      <h3 id="paper-modal-title">文献信息</h3>
+      <div class="body">
+        <div class="form-row">
+          <label>标题 *</label>
+          <input type="text" id="f-title">
+        </div>
+        <div class="form-grid">
+          <div class="form-row"><label>第一作者</label><input type="text" id="f-first"></div>
+          <div class="form-row"><label>通讯作者</label><input type="text" id="f-corr"></div>
+        </div>
+        <div class="form-row">
+          <label>全部作者（逗号分隔）</label>
+          <input type="text" id="f-authors">
+        </div>
+        <div class="form-grid">
+          <div class="form-row"><label>主题</label><input type="text" id="f-subject"></div>
+          <div class="form-row"><label>发表年份</label><input type="number" id="f-year"></div>
+        </div>
+        <div class="form-row"><label>期刊</label><input type="text" id="f-journal"></div>
+        <div class="form-grid">
+          <div class="form-row"><label>卷</label><input type="text" id="f-volume"></div>
+          <div class="form-row"><label>期</label><input type="text" id="f-issue"></div>
+        </div>
+        <div class="form-row"><label>DOI</label><input type="text" id="f-doi"></div>
+        <div class="form-row">
+          <label>摘要</label>
+          <textarea id="f-abstract" rows="4"></textarea>
+        </div>
+        <!-- 补充材料管理（仅编辑已有文献时显示） -->
+        <div class="form-row" id="supp-area" style="display:none">
+          <label>补充材料</label>
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px">
+            <button class="btn" id="btn-add-supp">＋ 添加补充材料 PDF</button>
+            <input type="file" id="supp-input" accept=".pdf" multiple style="display:none">
+          </div>
+          <div id="supp-list"></div>
+        </div>
+      </div>
+      <div class="foot">
+        <button class="btn danger" id="btn-delete" style="display:none; margin-right:auto">🗑 删除文献</button>
+        <button class="btn" id="btn-cancel">取消</button>
+        <button class="btn primary" id="btn-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/library.js"></script>
+</body>
+</html>

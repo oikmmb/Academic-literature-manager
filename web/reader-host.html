@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文献管家 - 阅读</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { display: flex; flex-direction: column; overflow: hidden; }
+    .host-tabbar {
+      display: flex; align-items: center; gap: 4px; padding: 6px 10px;
+      background: var(--panel); border-bottom: 1px solid var(--border); overflow-x: auto;
+    }
+    .host-tab {
+      display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+      border-radius: 8px; cursor: pointer; font-size: 13px; white-space: nowrap;
+      border: 1px solid transparent; color: var(--text-2); max-width: 220px;
+    }
+    .host-tab:hover { background: #f1f3f6; }
+    .host-tab.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; border-color: #c4d7fb; }
+    .host-tab .t-label { overflow: hidden; text-overflow: ellipsis; }
+    .host-tab .t-close { color: var(--text-2); font-size: 12px; padding: 0 2px; border-radius: 4px; }
+    .host-tab .t-close:hover { color: var(--danger); background: #fee2e2; }
+    .host-tab .t-split { font-size: 11px; color: var(--accent); }
+    .host-tabbar .btn { padding: 4px 10px; font-size: 12.5px; border-radius: 7px; }
+    .host-panes { flex: 1; display: flex; min-height: 0; }
+    .host-pane { flex: 1; min-width: 0; border-right: 1px solid var(--border); }
+    .host-pane:last-child { border-right: none; }
+    .host-pane iframe { width: 100%; height: 100%; border: none; display: block; }
+    .host-splitbar {
+      width: 5px; cursor: col-resize; background: var(--border); flex: 0 0 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="host-tabbar" id="tabbar">
+    <button class="btn" id="btn-add-paper" title="再打开一篇文献">＋ 文献</button>
+    <button class="btn" id="btn-split" title="当前文献与上一标签并排对比">⇋ 并排对比</button>
+    <span id="split-hint" style="font-size:12px; color:var(--text-2)"></span>
+  </div>
+  <div class="host-panes" id="panes"></div>
+
+  <!-- 文献选择弹窗 -->
+  <div class="modal-mask" id="picker" style="display:none">
+    <div class="modal" style="width:640px; max-height:80vh">
+      <h3>选择要打开的文献</h3>
+      <div class="body" id="picker-list" style="max-height:56vh"></div>
+      <div class="foot">
+        <button class="btn" id="picker-close">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/reader-host.js"></script>
+</body>
+</html>

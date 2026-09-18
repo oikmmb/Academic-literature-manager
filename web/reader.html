@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阅读 - 文献管家</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { display: flex; flex-direction: column; }
+    /* 顶栏 */
+    .topbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; background: var(--panel);
+      border-bottom: 1px solid var(--border); z-index: 50;
+    }
+    .topbar .title { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .topbar .page-ind { color: var(--text-2); font-size: 13px; }
+    .zoom-group { display: flex; align-items: center; gap: 2px; }
+    .zoom-group .btn { padding: 4px 9px; border-radius: 6px; }
+
+    /* 文档切换栏 */
+    .doc-area { flex: 1; display: flex; min-height: 0; }
+    .doc-bar {
+      width: 180px; min-width: 180px; background: var(--panel);
+      border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 8px;
+    }
+    .doc-bar .doc-title { font-size: 12px; color: var(--text-2); padding: 2px 8px 8px; }
+    .doc-item {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 8px 10px; margin: 2px 0; border-radius: 8px; cursor: pointer;
+      border: none; background: none; text-align: left; font-family: inherit; font-size: 13.5px;
+      color: var(--text);
+    }
+    .doc-item:hover { background: #f1f3f6; }
+    .doc-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+    .doc-item .pages { margin-left: auto; font-size: 11.5px; color: var(--text-2); }
+    .doc-del { font-size: 12px; color: var(--text-2); padding: 0 2px; border-radius: 4px; }
+    .doc-del:hover { color: var(--danger); background: #fee2e2; }
+
+    /* 阅读区 */
+    .reader-wrap { flex: 1; overflow-y: auto; background: #e8eaee; position: relative; }
+    .pages { width: fit-content; max-width: none; margin: 0 auto; padding: 20px 16px; }
+    .page-wrap { position: relative; margin-bottom: 18px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,.15); background: #fff; overflow: hidden; }
+    .page-inner { position: absolute; top: 0; left: 0; transform-origin: top left; }
+    .page-inner img.page-img { position: absolute; top: 0; left: 0; display: block; }
+    .page-num { position: absolute; bottom: 6px; right: 10px; z-index: 5; color: #999; font-size: 11px; background: rgba(255,255,255,.75); padding: 1px 6px; border-radius: 10px; }
+
+    /* 词级文本层 */
+    .textlayer { position: absolute; top: 0; left: 0; z-index: 3; }
+    .textlayer span {
+      position: absolute; user-select: text; color: transparent;
+      white-space: nowrap; line-height: 1; cursor: text;
+      overflow: hidden;   /* 浏览器字体可能比 PDF 词框宽，裁剪溢出防止邻词重叠导致选区串词 */
+    }
+    /* 页眉页脚：保持可参与选区（user-select:none 会让跨页拖动经过时异常扩展、整页选中），
+       但选中高亮透明（视觉上不可见选中），锚点收集按 zone 过滤剔除正文以外的词 */
+    .textlayer span[data-zone="header"], .textlayer span[data-zone="footer"] {
+      cursor: default;
+    }
+    .textlayer span[data-zone="header"]::selection,
+    .textlayer span[data-zone="footer"]::selection {
+      background: transparent;
+    }
+    .textlayer span::selection { background: rgba(37, 99, 235, .22); }
+
+    /* 高亮层 */
+    .hllayer { position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; }
+    .hllayer .hl-rect { position: absolute; border-radius: 2px; pointer-events: auto; cursor: pointer; }
+    .hllayer .hl-rect.has-note { outline: 2px dashed rgba(0,0,0,.35); outline-offset: 1px; }
+    .hllayer .sel-rect { position: absolute; background: rgba(37, 99, 235, .28); border: 1px solid rgba(37, 99, 235, .5); border-radius: 2px; }
+    .hllayer .hl-rect.flash { animation: hlflash 1.6s ease; }
+    @keyframes hlflash { 0%,60% { opacity: 1; outline: 3px solid var(--accent); } 100% { opacity: .55; } }
+
+    /* 选区浮动工具条 */
+    .selbar {
+      position: fixed; z-index: 80; display: none; align-items: center; gap: 4px;
+      background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.18); padding: 5px;
+    }
+    .selbar .color-dot { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+    .selbar .color-dot:hover { border-color: var(--accent); }
+    .selbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 3px; }
+    .selbar .act { border: none; background: none; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; color: var(--text); }
+    .selbar .act:hover { background: var(--accent-soft); color: var(--accent); }
+
+    /* 笔记侧栏 */
+    .notes-panel {
+      position: fixed; top: 0; right: -420px; width: 400px; height: 100%;
+      background: var(--panel); border-left: 1px solid var(--border);
+      transition: right .22s; z-index: 90; display: flex; flex-direction: column;
+      box-shadow: -6px 0 24px rgba(0,0,0,.12);
+    }
+    .notes-panel.open { right: 0; }
+    .notes-panel h3 { padding: 14px 16px 8px; font-size: 15px; }
+    .notes-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+    .note-item {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 12px; margin-bottom: 10px; box-shadow: var(--shadow);
+    }
+    .note-item .quote { font-size: 12.5px; color: var(--text-2); border-left: 3px solid var(--accent); padding-left: 8px; margin: 6px 0; max-height: 60px; overflow-y: auto; }
+    .note-item .head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+    .note-item textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 6px;
+      padding: 6px 8px; font-size: 13px; resize: vertical; min-height: 42px;
+    }
+    .note-item .foot { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+    .note-item .foot .btn { padding: 3px 9px; font-size: 12.5px; border-radius: 6px; }
+
+    /* 思维导图面板 */
+    .mm-overlay {
+      position: fixed; inset: 0; background: #f0f2f5; z-index: 95;
+      display: flex; flex-direction: column;
+    }
+    .mm-toolbar {
+      display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+      background: var(--panel); border-bottom: 1px solid var(--border);
+    }
+    .mm-hint { font-size: 12px; color: var(--text-2); }
+    .mm-canvas { flex: 1; min-width: 0; min-height: 0; overflow: auto; position: relative; padding: 24px; }
+    .mm-empty { text-align: center; color: var(--text-2); padding: 80px 0; }
+    .mm-node {
+      position: absolute; width: 190px; background: #fff; border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: var(--shadow); padding: 8px 10px;
+      cursor: default; font-size: 13px; line-height: 1.5;
+    }
+    .mm-node .mm-text { word-break: break-all; max-height: 62px; overflow: hidden; }
+    .mm-node .mm-text[contenteditable="true"] { outline: 2px solid var(--accent); max-height: none; }
+    .mm-node .mm-ops { display: none; position: absolute; top: -12px; right: -6px; gap: 2px; }
+    .mm-node:hover .mm-ops { display: flex; }
+    .mm-node.root { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+    .mm-ops button {
+      border: 1px solid var(--border); background: #fff; border-radius: 50%;
+      width: 22px; height: 22px; cursor: pointer; font-size: 11px; line-height: 1;
+    }
+    .mm-ops button:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* AI 聊天面板 */
+    .chat-panel {
+      position: fixed; top: 0; right: -460px; width: 440px; height: 100%;
+      background: var(--panel); border-left: 1px solid var(--border);
+      transition: right .22s; z-index: 91; display: flex; flex-direction: column;
+      box-shadow: -6px 0 24px rgba(0,0,0,.12);
+    }
+    .chat-panel.open { right: 0; }
+    .chat-panel h3 { padding: 14px 16px 8px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .chat-list { flex: 1; overflow-y: auto; padding: 4px 14px 10px; }
+    .chat-msg { margin-bottom: 12px; display: flex; }
+    .chat-msg.user { justify-content: flex-end; }
+    .chat-bubble {
+      max-width: 85%; padding: 9px 12px; border-radius: 12px; font-size: 13.5px;
+      line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+      background: #f1f3f6;
+    }
+    .chat-msg.user .chat-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .chat-msg.assistant .chat-bubble { border-bottom-left-radius: 4px; }
+    .chat-bubble img { max-width: 220px; border-radius: 8px; display: block; margin: 6px 0; }
+    .chat-quote {
+      background: #fff8e6; border-left: 3px solid #e5b95a; padding: 6px 9px;
+      border-radius: 6px; font-size: 12px; color: #7a6220; margin-bottom: 6px;
+      max-height: 90px; overflow-y: auto; white-space: normal;
+    }
+    .chat-pending { padding: 0 16px; }
+    .chat-pending .item {
+      display: flex; align-items: center; gap: 8px; background: #eef6ff;
+      border: 1px solid #bcd7f7; border-radius: 8px; padding: 6px 10px; margin-bottom: 6px;
+      font-size: 12.5px;
+    }
+    .chat-pending img { max-width: 120px; max-height: 70px; border-radius: 4px; }
+    .chat-input-row { display: flex; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--border); }
+    .chat-input-row input { flex: 1; }
+    .chat-typing { color: var(--text-2); font-size: 12.5px; padding: 2px 4px 6px; }
+
+    /* 框选截图模式 */
+    body.shot-mode .reader-wrap { cursor: crosshair; }
+    .shot-box {
+      position: fixed; border: 2px dashed var(--accent); background: rgba(37,99,235,.08);
+      z-index: 85; pointer-events: none;
+    }
+    .shot-tip {
+      position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+      background: #1f2933; color: #fff; padding: 8px 18px; border-radius: 20px;
+      z-index: 86; font-size: 13px;
+    }
+
+    /* 参考文献悬浮窗 */
+    #ref-tip {
+      position: fixed; z-index: 88; max-width: 440px; max-height: 300px;
+      overflow-y: auto; background: #fffef5; border: 1px solid #d8cf9f;
+      border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.18);
+      padding: 10px 12px; font-size: 12.5px; line-height: 1.6; color: var(--text);
+    }
+    #ref-tip .ref-item { margin-bottom: 8px; }
+    #ref-tip .ref-item:last-child { margin-bottom: 0; }
+    #ref-tip b { color: var(--accent); }
+
+    /* 扫描版提示 */
+    .scan-tip {
+      position: absolute; top: 8px; left: 8px; z-index: 6; background: #fff8e1;
+      border: 1px solid #f0d99a; border-radius: 8px; padding: 5px 10px; font-size: 12px; color: #8a6d1a;
+    }
+    .scan-tip .btn { padding: 2px 8px; font-size: 12px; border-radius: 5px; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="btn" id="btn-back">← 返回</button>
+    <div class="title" id="paper-title">加载中…</div>
+    <span class="page-ind" id="page-ind">—</span>
+    <div class="zoom-group">
+      <button class="btn" id="btn-zoom-out" title="缩小">−</button>
+      <button class="btn" id="btn-zoom-fit" title="适应宽度">适应宽度</button>
+      <button class="btn" id="btn-zoom-in" title="放大">＋</button>
+    </div>
+    <button class="btn" id="btn-notes">📝 笔记 (<span id="notes-count">0</span>)</button>
+    <button class="btn" id="btn-mindmap">🧠 导图</button>
+    <button class="btn" id="btn-shot">⛶ 截图问</button>
+    <button class="btn" id="btn-chat">💬 AI 问答</button>
+  </div>
+
+  <!-- 思维导图（全局笔记） -->
+  <div class="mm-overlay" id="mm-overlay" style="display:none">
+    <div class="mm-toolbar">
+      <b>🧠 全局笔记（思维导图）</b>
+      <span class="mm-hint" id="mm-hint"></span>
+      <span style="flex:1"></span>
+      <button class="btn" id="mm-zoom-out" title="缩小画布">−</button>
+      <button class="btn" id="mm-zoom-reset" title="重置缩放">100%</button>
+      <button class="btn" id="mm-zoom-in" title="放大画布">＋</button>
+      <button class="btn" id="mm-ai">🤖 AI 生成</button>
+      <button class="btn" id="mm-add-root">＋ 添加根节点</button>
+      <button class="btn" id="mm-close">✕ 关闭</button>
+    </div>
+    <div class="mm-canvas" id="mm-canvas"></div>
+  </div>
+
+  <div class="doc-area">
+    <div class="doc-bar" id="doc-bar" style="display:none">
+      <div class="doc-title" style="display:flex; align-items:center">
+        📑 文档切换
+        <button class="btn" id="btn-add-supp" title="添加补充材料" style="margin-left:auto; padding:2px 8px; font-size:13px">＋</button>
+        <input type="file" id="supp-input" accept=".pdf" multiple style="display:none">
+      </div>
+      <div id="doc-list"></div>
+    </div>
+    <div class="reader-wrap" id="reader-wrap">
+      <div class="pages" id="pages"></div>
+    </div>
+  </div>
+
+  <!-- 选区工具条 -->
+  <div class="selbar" id="selbar">
+    <div class="color-dot" style="background:#FFEB3B" data-color="#FFEB3B" title="黄色高亮"></div>
+    <div class="color-dot" style="background:#A7F3D0" data-color="#A7F3D0" title="绿色高亮"></div>
+    <div class="color-dot" style="background:#BFDBFE" data-color="#BFDBFE" title="蓝色高亮"></div>
+    <div class="color-dot" style="background:#FECACA" data-color="#FECACA" title="红色高亮"></div>
+    <div class="sep"></div>
+    <select id="sel-opacity" title="新高的透明度" style="border:1px solid var(--border); border-radius:6px; font-size:12.5px; padding:3px 4px">
+      <option value="0.3">透明度 30%</option>
+      <option value="0.45">透明度 45%</option>
+      <option value="0.55" selected>透明度 55%</option>
+      <option value="0.7">透明度 70%</option>
+      <option value="0.85">透明度 85%</option>
+    </select>
+    <div class="sep"></div>
+    <button class="act" id="sel-note">✍ 笔记</button>
+    <button class="act" id="sel-translate">译 英译中</button>
+    <button class="act" id="sel-ask">💬 问 AI</button>
+    <div class="sep"></div>
+    <button class="act" id="sel-copy">复制</button>
+  </div>
+
+  <!-- 笔记侧栏 -->
+  <div class="notes-panel" id="notes-panel">
+    <h3 style="display:flex; align-items:center">
+      📝 笔记与高亮
+      <button class="btn" id="btn-page-note" style="font-size:12.5px; padding:3px 9px; margin-left:10px">＋ 当前页笔记</button>
+      <button class="btn" id="btn-notes-close" style="margin-left:auto; padding:3px 10px" title="收起面板">✕</button>
+    </h3>
+    <div class="notes-list" id="notes-list"></div>
+  </div>
+
+  <!-- AI 聊天面板 -->
+  <div class="chat-panel" id="chat-panel">
+    <h3>💬 AI 问答
+      <button class="btn" id="chat-clear" style="font-size:12px; padding:3px 9px">清空会话</button>
+      <button class="btn" id="chat-close" style="margin-left:auto; padding:3px 10px">✕</button>
+    </h3>
+    <div class="chat-list" id="chat-list"></div>
+    <div class="chat-pending" id="chat-pending"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="向 AI 提问…（Enter 发送）">
+      <button class="btn primary" id="chat-send">发送</button>
+    </div>
+  </div>
+
+  <!-- 翻译面板 -->
+  <div class="modal-mask" id="translate-modal" style="display:none">
+    <div class="modal" style="width:520px">
+      <h3>译　英译中 <span id="tr-cached" style="font-size:12px; color:var(--text-2)"></span></h3>
+      <div class="body">
+        <div id="tr-src" style="font-size:12.5px; color:var(--text-2); border-left:3px solid var(--border); padding-left:8px; margin-bottom:10px; max-height:90px; overflow-y:auto"></div>
+        <div id="tr-result" style="line-height:1.7; min-height:60px"></div>
+      </div>
+      <div class="foot">
+        <button class="btn" id="btn-tr-close">关闭</button>
+        <button class="btn" id="btn-tr-copy">复制译文</button>
+        <button class="btn primary" id="btn-tr-note">📝 存为笔记</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/reader.js"></script>
+  <script src="js/mindmap.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/refs-tip.js"></script>
+</body>
+</html>

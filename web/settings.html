@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - 文献管家</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .page { max-width: 680px; margin: 0 auto; padding: 30px 20px; overflow-y: auto; height: 100vh; }
+    .back { color: var(--text-2); text-decoration: none; font-size: 13px; display: inline-block; margin-bottom: 14px; }
+    .back:hover { color: var(--accent); }
+    .panel { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 22px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .hint { font-size: 12.5px; color: var(--text-2); margin-top: 6px; line-height: 1.6; }
+    .status-ok { color: #059669; }
+    .status-err { color: var(--danger); }
+    .provider-card {
+      display: flex; gap: 10px; align-items: flex-start;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 8px; cursor: pointer; background: #fff;
+      transition: all .15s;
+    }
+    .provider-card:hover { border-color: #9db8ec; }
+    .provider-card.active { border-color: var(--accent); background: var(--accent-soft); }
+    .provider-card .name { font-weight: 600; margin-bottom: 2px; }
+    .provider-card .desc { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+    .provider-card input[type="radio"] { margin-top: 3px; accent-color: var(--accent); }
+    .cred-row { margin-bottom: 10px; }
+    .cred-row label { display: block; font-size: 12.5px; color: var(--text-2); margin-bottom: 4px; }
+    .cred-row input { width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <a class="back" href="index.html">← 返回文献库</a>
+
+    <div class="panel">
+      <h3 style="margin-bottom:14px">⚙ 翻译服务</h3>
+
+      <label class="provider-card" id="pc-deepseek">
+        <input type="radio" name="provider" value="deepseek">
+        <div>
+          <div class="name">DeepSeek（大模型翻译）</div>
+          <div class="desc">学术翻译质量最佳，能处理长段落；按量计费（约每百万字几元）。platform.deepseek.com 申请 API Key。</div>
+        </div>
+      </label>
+      <label class="provider-card" id="pc-youdao">
+        <input type="radio" name="provider" value="youdao">
+        <div>
+          <div class="name">有道智云</div>
+          <div class="desc">经典机器翻译，免费额度充足；ai.youdao.com 申请 App Key 和密钥。</div>
+        </div>
+      </label>
+      <label class="provider-card" id="pc-baidu">
+        <input type="radio" name="provider" value="baidu">
+        <div>
+          <div class="name">百度翻译</div>
+          <div class="desc">通用机器翻译，标准版免费额度；fanyi-api.baidu.com 申请 API Key 和 Secret Key。</div>
+        </div>
+      </label>
+    </div>
+
+    <div class="panel" id="cred-panel" style="display:none">
+      <h3 id="cred-title" style="margin-bottom:14px">凭据</h3>
+
+      <div id="cred-deepseek">
+        <div class="cred-row">
+          <label>API Key</label>
+          <input type="password" id="f-ds-key" placeholder="sk-…" autocomplete="off">
+        </div>
+        <div class="cred-row">
+          <label>API 地址（一般无需修改）</label>
+          <input type="text" id="f-ds-base" placeholder="https://api.deepseek.com">
+        </div>
+        <div class="cred-row">
+          <label>模型</label>
+          <input type="text" id="f-ds-model" placeholder="deepseek-chat">
+        </div>
+      </div>
+
+      <div id="cred-youdao" style="display:none">
+        <div class="cred-row">
+          <label>App Key</label>
+          <input type="text" id="f-yd-key" autocomplete="off">
+        </div>
+        <div class="cred-row">
+          <label>App Secret（密钥）</label>
+          <input type="password" id="f-yd-secret" autocomplete="off">
+        </div>
+      </div>
+
+      <div id="cred-baidu" style="display:none">
+        <div class="cred-row">
+          <label>API Key（AK）</label>
+          <input type="text" id="f-bd-ak" autocomplete="off">
+        </div>
+        <div class="cred-row">
+          <label>Secret Key（SK）</label>
+          <input type="password" id="f-bd-sk" autocomplete="off">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:6px">
+        <button class="btn" id="btn-test">测试翻译</button>
+        <button class="btn primary" id="btn-save">保存设置</button>
+      </div>
+      <div id="test-result" style="margin-top:10px; font-size:13px"></div>
+      <div class="hint">所有凭据仅保存在本机数据库，不会上传到除所选翻译服务以外的任何地方。</div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:14px">🖍 阅读器设置</h3>
+      <div class="form-row">
+        <label>高亮默认透明度（新建高亮时使用；已有高亮可在笔记侧栏单独调整）</label>
+        <select id="f-hl-opacity" style="width:200px">
+          <option value="0.3">30%（浅）</option>
+          <option value="0.45">45%</option>
+          <option value="0.55">55%（默认）</option>
+          <option value="0.7">70%</option>
+          <option value="0.85">85%（深）</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>文献 PDF 保存目录（导入的正文与补充材料都存到这里）</label>
+        <div style="display:flex; gap:8px">
+          <input type="text" id="f-pdf-dir" placeholder="留空 = 默认目录" style="flex:1">
+          <button class="btn" id="btn-pdf-dir-reset">恢复默认</button>
+        </div>
+        <div class="hint" id="pdf-dir-hint">留空时使用默认目录；修改后新导入的文献保存到新位置，已有文献不受影响</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:14px">💬 对话 API（AI 问答窗口）</h3>
+      <label class="provider-card" id="cc-deepseek">
+        <input type="radio" name="chat-provider" value="deepseek">
+        <div>
+          <div class="name">DeepSeek（复用上方翻译的 Key）</div>
+          <div class="desc">无需额外配置。注意：DeepSeek 不支持图片输入，「截图问」需选下方视觉模型。</div>
+        </div>
+      </label>
+      <label class="provider-card" id="cc-openai">
+        <input type="radio" name="chat-provider" value="openai_compat">
+        <div>
+          <div class="name">OpenAI 兼容接口（自定义）</div>
+          <div class="desc">填写任意兼容服务的地址/Key/模型：GPT-4o、Qwen-VL、GLM-4V、Kimi 等。视觉模型支持「截图问」。</div>
+        </div>
+      </label>
+      <div id="cc-cred" style="display:none; margin-top:10px">
+        <div class="cred-row">
+          <label>API 地址（如 https://api.openai.com/v1）</label>
+          <input type="text" id="f-chat-base" placeholder="https://…/v1">
+        </div>
+        <div class="cred-row">
+          <label>API Key</label>
+          <input type="password" id="f-chat-key" autocomplete="off">
+        </div>
+        <div class="cred-row">
+          <label>模型（视觉问答请填视觉模型，如 gpt-4o-mini / qwen-vl-max）</label>
+          <input type="text" id="f-chat-model" placeholder="gpt-4o-mini">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>
