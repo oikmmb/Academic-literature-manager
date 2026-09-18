@@ -130,7 +130,6 @@ venv\Scripts\python scripts\api_smoke.py        :: 对运行中服务的端到�
 - [PyMuPDF](https://github.com/pymupdf/PyMuPDF) — PDF 渲染与文本提取
 - [RapidOCR](https://github.com/RapidAI/RapidOCR) — OCR 引擎
 - [DeepSeek](https://platform.deepseek.com) — 默认 AI 模型
-- 酒店推荐项目（同作者）— 项目结构约定来源
 
 ## ⚠️ 免责声明
 
