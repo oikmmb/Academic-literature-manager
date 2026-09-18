@@ -1,0 +1,11 @@
+server/venv/
+server/data/
+data/
+build/
+dist/
+models/
+*.spec
+__pycache__/
+*.pyc
+.pytest_cache/
+cert.pfx
